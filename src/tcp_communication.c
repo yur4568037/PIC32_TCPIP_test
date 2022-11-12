@@ -33,6 +33,7 @@
 #include "tcp_communication.h"
 #include "system/console/sys_console.h"
 #include "tcpip/tcpip.h"
+#include "peripheral/gpio/plib_gpio.h"
 
 // *****************************************************************************
 // *****************************************************************************
@@ -121,6 +122,49 @@ uint16_t data_counter = 0;
 
 uint8_t transmit_counter = 0;
 
+void parsing_rx_tcp(uint8_t* buf, uint16_t length)
+{
+    if (length < 3)
+        return;
+    
+    if(
+        (char) buf[0] != 'C' ||
+        (char) buf[1] != 'M' ||    
+        (char) buf[2] != 'D'    )
+    {
+        return;
+    }
+    
+    if(length < 7)
+        return;
+    
+    if(
+        (char) buf[3] == 'L' &&
+        (char) buf[4] == 'E' &&    
+        (char) buf[5] == 'D'    )
+    {
+        uint8_t led_num = buf[6] - 0x30;
+        
+        switch(led_num)
+        {
+            case 1:
+                LED1_Toggle();
+                break;
+                
+            case 2:
+                LED2_Toggle();
+                break;
+                
+            case 3:
+                LED3_Toggle();
+                break;
+        }
+    }
+            
+    
+}   // void parsing_rx_tcp(uint8_t* buf, uint16_t length)
+
+
 void TCP_COMMUNICATION_Tasks ( void )
 {
     // 1 ms
@@ -171,6 +215,30 @@ void TCP_COMMUNICATION_Tasks ( void )
             break;
         }
         
+        case TCP_COMMUNICATION_STATE_CHECK_CONNECTION:
+        {
+            if(tcp_connect_counter >= 500)
+            {
+                tcp_connect_counter = 0;
+                
+                if(tcp_communicationData.mrqSocket == INVALID_SOCKET || !TCPIP_TCP_IsConnected(tcp_communicationData.mrqSocket))
+                {
+                    SYS_CONSOLE_MESSAGE("INVALID_SOCKET \r\n");
+                    TCPIP_TCP_Close(tcp_communicationData.mrqSocket);
+                    tcp_communicationData.state = TCP_COMMUNICATION_STATE_TRY_TO_CONNECT_TO_SERVER;
+
+                    break;
+                }
+                else
+                {
+                    SYS_CONSOLE_MESSAGE("Client opened port \r\n");
+                    tcp_communicationData.state = TCP_COMMUNICATION_STATE_SERVER_CONNECTION_HANDLER;   
+                }
+            }
+            
+            break;
+        }
+        
         case TCP_COMMUNICATION_STATE_CHECK_NET_READY:
         {
             TCPIP_NET_HANDLE hNet = TCPIP_STACK_NetHandleGet("PIC32INT");
@@ -199,7 +267,8 @@ void TCP_COMMUNICATION_Tasks ( void )
         {
             
             IPV4_ADDR addr;
-            char pcip[] = "192.168.100.55";
+            //char pcip[] = "192.168.100.55";
+            char pcip[] = "192.168.1.10";
             
             TCPIP_Helper_StringToIPAddress(pcip, &addr);
             
@@ -207,20 +276,12 @@ void TCP_COMMUNICATION_Tasks ( void )
             tcp_communicationData.mrqSocket = TCPIP_TCP_ClientOpen(IP_ADDRESS_TYPE_IPV4, 2323,
                     (IP_MULTI_ADDRESS*) &addr);
             
-            if(tcp_communicationData.mrqSocket == INVALID_SOCKET)
-            {
-                SYS_CONSOLE_MESSAGE("INVALID_SOCKET \r\n");
-                tcp_connect_counter = 1;
-                tcp_communicationData.state = TCP_COMMUNICATION_STATE_WAIT_NEW_CONNECTION;
-                
-                break;
-            }
+            tcp_connect_counter = 1;
+            tcp_communicationData.state = TCP_COMMUNICATION_STATE_CHECK_CONNECTION;
             
-            SYS_CONSOLE_MESSAGE("Client opened port \r\n");
-
-            tcp_communicationData.state = TCP_COMMUNICATION_STATE_SERVER_CONNECTION_HANDLER;
             
-            data_counter = 1;
+            
+            //data_counter = 1;
             
             /*
             TCPIP_TCP_Flush(tcp_communicationData.mrqSocket);
@@ -236,19 +297,26 @@ void TCP_COMMUNICATION_Tasks ( void )
 
         case TCP_COMMUNICATION_STATE_SERVER_CONNECTION_HANDLER:
         {
+            if(!TCPIP_TCP_IsConnected(tcp_communicationData.mrqSocket))
+            {
+                SYS_CONSOLE_MESSAGE("Client is disconnected \r\n");
+                TCPIP_TCP_Close(tcp_communicationData.mrqSocket);
+                tcp_communicationData.state = TCP_COMMUNICATION_STATE_TRY_TO_CONNECT_TO_SERVER;
+                break;
+            }
             
+            // Receive TCP packet
             uint16_t rx_lenght = TCPIP_TCP_GetIsReady(tcp_communicationData.mrqSocket);
             if(rx_lenght > 0)
             {
-                //uint8_t* rx_buffer = (uint8_t*)malloc(rx_lenght * sizeof(uint8_t) + 2);
-                
                 uint8_t rx_buffer[512] = {0};
                 char rx_char_buffer[512] = {0};
                 
                 TCPIP_TCP_ArrayGet(tcp_communicationData.mrqSocket, rx_buffer, rx_lenght);
                 
                 SYS_CONSOLE_PRINT("Receive buffer. Length: %d\r\n", rx_lenght);
-                //SYS_CONSOLE_PRINT("Malloc: %d\r\n", rx_lenght * sizeof(uint8_t) + 2);
+                
+                parsing_rx_tcp(rx_buffer, rx_lenght);
                 
                 rx_buffer[rx_lenght] = (uint8_t)'\r';
                 rx_buffer[rx_lenght+1] = (uint8_t)'\n';
@@ -256,12 +324,12 @@ void TCP_COMMUNICATION_Tasks ( void )
                 for(uint16_t i = 0; i < rx_lenght + 2; i++)
                     rx_char_buffer[i] = (char) rx_buffer[i];
                 
-                //SYS_CONSOLE_MESSAGE((char*) rx_buffer);
                 SYS_CONSOLE_MESSAGE(rx_char_buffer);
                 
-                //free(rx_buffer);
             }
             
+            // Periodic transmit TCP packet
+            /*
             if(data_counter >= 3000)
             {
                 data_counter = 1;
@@ -278,14 +346,8 @@ void TCP_COMMUNICATION_Tasks ( void )
                 TCPIP_TCP_ArrayPut(tcp_communicationData.mrqSocket, (uint8_t*)"123456", 6);
             
             }
-            /*
-            temp_counter++;
-            if(temp_counter >= 100000)
-            {
-                temp_counter = 0;
-                SYS_CONSOLE_MESSAGE("test2\r\n");
-            }
             */
+            
             break;
         }
 

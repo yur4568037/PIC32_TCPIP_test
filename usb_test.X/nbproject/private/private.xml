@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
+    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group/>
+        <group>
+            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/system/console/src/sys_console.c</file>
+            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/tcp_communication.c</file>
+            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/library/tcpip/src/tcp.c</file>
+            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/library/tcpip/tcp.h</file>
+            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/system/console/sys_console.h</file>
+            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/tcp_communication.h</file>
+        </group>
     </open-files>
 </project-private>
