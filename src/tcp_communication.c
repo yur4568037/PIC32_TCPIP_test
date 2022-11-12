@@ -160,6 +160,73 @@ void parsing_rx_tcp(uint8_t* buf, uint16_t length)
                 break;
         }
     }
+    
+    // set static IP
+    if(
+        (char) buf[3] == 'I' &&
+        (char) buf[4] == 'P'    )
+    {
+        
+        char new_ip_str[15] = {0};
+        
+        for(uint8_t i = 5; i < length; i++)
+        {
+            new_ip_str[i-5] = buf[i];
+        }
+        
+        const TCPIP_NETWORK_CONFIG __attribute__((unused))  new_config[] =
+        {
+
+            {
+                .interface = "ETHMAC",
+                .hostName = "MCHPBOARD_E",
+                .macAddr = 0,
+                .ipAddr = new_ip_str,
+                .ipMask = "255.255.255.0",
+                .gateway = "192.168.1.1",
+                .priDNS = "192.1618.1.1",
+                .secondDNS = TCPIP_NETWORK_DEFAULT_SECOND_DNS_IDX0,
+                .powerMode = TCPIP_NETWORK_DEFAULT_POWER_MODE_IDX0,
+                .startFlags = TCPIP_NETWORK_CONFIG_DNS_CLIENT_ON | TCPIP_NETWORK_CONFIG_IP_STATIC,
+                .pMacObject = &TCPIP_NETWORK_DEFAULT_MAC_DRIVER_IDX0,
+            },
+        };
+        
+        TCPIP_NET_HANDLE hNet = TCPIP_STACK_NetHandleGet("PIC32INT");
+        TCPIP_STACK_NetDown(hNet);
+        TCPIP_STACK_NetUp(hNet, new_config);
+    }
+    
+    // Set DHCP
+    if(
+        (char) buf[3] == 'D' &&
+        (char) buf[4] == 'H' &&    
+        (char) buf[4] == 'C' &&
+        (char) buf[5] == 'P'    )
+    {
+        const TCPIP_NETWORK_CONFIG __attribute__((unused))  new_config[] =
+        {
+            /*** Network Configuration Index 0 ***/
+            {
+                .interface = TCPIP_NETWORK_DEFAULT_INTERFACE_NAME_IDX0,
+                .hostName = TCPIP_NETWORK_DEFAULT_HOST_NAME_IDX0,
+                .macAddr = TCPIP_NETWORK_DEFAULT_MAC_ADDR_IDX0,
+                .ipAddr = TCPIP_NETWORK_DEFAULT_IP_ADDRESS_IDX0,
+                .ipMask = TCPIP_NETWORK_DEFAULT_IP_MASK_IDX0,
+                .gateway = TCPIP_NETWORK_DEFAULT_GATEWAY_IDX0,
+                .priDNS = TCPIP_NETWORK_DEFAULT_DNS_IDX0,
+                .secondDNS = TCPIP_NETWORK_DEFAULT_SECOND_DNS_IDX0,
+                .powerMode = TCPIP_NETWORK_DEFAULT_POWER_MODE_IDX0,
+                .startFlags = TCPIP_NETWORK_DEFAULT_INTERFACE_FLAGS_IDX0,
+                .pMacObject = &TCPIP_NETWORK_DEFAULT_MAC_DRIVER_IDX0,
+            },
+        };
+        
+        TCPIP_NET_HANDLE hNet = TCPIP_STACK_NetHandleGet("PIC32INT");
+        TCPIP_STACK_NetDown(hNet);
+        TCPIP_STACK_NetUp(hNet, new_config);
+        
+    }
             
     
 }   // void parsing_rx_tcp(uint8_t* buf, uint16_t length)
@@ -223,7 +290,7 @@ void TCP_COMMUNICATION_Tasks ( void )
                 
                 if(tcp_communicationData.mrqSocket == INVALID_SOCKET || !TCPIP_TCP_IsConnected(tcp_communicationData.mrqSocket))
                 {
-                    SYS_CONSOLE_MESSAGE("INVALID_SOCKET \r\n");
+                    //SYS_CONSOLE_MESSAGE("INVALID_SOCKET \r\n");
                     TCPIP_TCP_Close(tcp_communicationData.mrqSocket);
                     tcp_communicationData.state = TCP_COMMUNICATION_STATE_TRY_TO_CONNECT_TO_SERVER;
 
@@ -316,8 +383,6 @@ void TCP_COMMUNICATION_Tasks ( void )
                 
                 SYS_CONSOLE_PRINT("Receive buffer. Length: %d\r\n", rx_lenght);
                 
-                parsing_rx_tcp(rx_buffer, rx_lenght);
-                
                 rx_buffer[rx_lenght] = (uint8_t)'\r';
                 rx_buffer[rx_lenght+1] = (uint8_t)'\n';
                 
@@ -326,6 +391,7 @@ void TCP_COMMUNICATION_Tasks ( void )
                 
                 SYS_CONSOLE_MESSAGE(rx_char_buffer);
                 
+                parsing_rx_tcp(rx_buffer, rx_lenght);
             }
             
             // Periodic transmit TCP packet
