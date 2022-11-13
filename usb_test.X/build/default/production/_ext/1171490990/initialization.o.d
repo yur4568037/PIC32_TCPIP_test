@@ -28,13 +28,14 @@ build/default/production/_ext/1171490990/initialization.o: \
  ../src/config/default/driver/ethphy/drv_ethphy.h \
  ../src/config/default/library/tcpip/tcpip_ethernet.h \
  ../src/config/default/library/tcpip/tcpip_mac.h \
+ ../src/config/default/peripheral/nvm/plib_nvm.h \
  ../src/config/default/system/time/sys_time.h \
  ../src/config/default/system/time/sys_time_definitions.h \
+ ../src/config/default/peripheral/coretimer/plib_coretimer.h \
  ../src/config/default/usb/usb_device_cdc.h \
  ../src/config/default/usb/usb_device.h \
  ../src/config/default/usb/src/usb_device_function_driver.h \
  ../src/config/default/usb/usb_cdc.h ../src/config/default/usb/usb_cdc.h \
- ../src/config/default/peripheral/coretimer/plib_coretimer.h \
  ../src/config/default/peripheral/tmr/plib_tmr2.h \
  ../src/config/default/peripheral/tmr/plib_tmr_common.h \
  ../src/config/default/driver/usb/usbfs/drv_usbfs.h \
@@ -194,9 +195,13 @@ build/default/production/_ext/1171490990/initialization.o: \
 
 ../src/config/default/library/tcpip/tcpip_mac.h:
 
+../src/config/default/peripheral/nvm/plib_nvm.h:
+
 ../src/config/default/system/time/sys_time.h:
 
 ../src/config/default/system/time/sys_time_definitions.h:
+
+../src/config/default/peripheral/coretimer/plib_coretimer.h:
 
 ../src/config/default/usb/usb_device_cdc.h:
 
@@ -207,8 +212,6 @@ build/default/production/_ext/1171490990/initialization.o: \
 ../src/config/default/usb/usb_cdc.h:
 
 ../src/config/default/usb/usb_cdc.h:
-
-../src/config/default/peripheral/coretimer/plib_coretimer.h:
 
 ../src/config/default/peripheral/tmr/plib_tmr2.h:
 

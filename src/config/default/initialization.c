@@ -512,6 +512,8 @@ void SYS_Initialize ( void* data )
 
 	GPIO_Initialize();
 
+    NVM_Initialize();
+
     CORETIMER_Initialize();
     TMR2_Initialize();
 

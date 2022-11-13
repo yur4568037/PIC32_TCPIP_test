@@ -29,7 +29,8 @@ build/default/production/_ext/1360937237/tcp_communication.o: \
  ../src/config/default/system/console/src/sys_console_local.h \
  ../src/config/default/library/tcpip/tcpip.h \
  ../src/config/default/peripheral/gpio/plib_gpio.h \
- ../src/config/default/device.h
+ ../src/config/default/device.h \
+ ../src/config/default/peripheral/nvm/plib_nvm.h
 
 ../src/tcp_communication.h:
 
@@ -94,3 +95,5 @@ build/default/production/_ext/1360937237/tcp_communication.o: \
 ../src/config/default/peripheral/gpio/plib_gpio.h:
 
 ../src/config/default/device.h:
+
+../src/config/default/peripheral/nvm/plib_nvm.h:

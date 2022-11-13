@@ -34,6 +34,23 @@
 #include "system/console/sys_console.h"
 #include "tcpip/tcpip.h"
 #include "peripheral/gpio/plib_gpio.h"
+#include "peripheral/nvm/plib_nvm.h"
+
+#define READ_WRITE_SIZE         (NVM_FLASH_PAGESIZE)
+//#define BUFFER_SIZE             (READ_WRITE_SIZE / sizeof(uint32_t))
+#define BUFFER_SIZE             (88)
+
+#define APP_FLASH_ADDRESS       (NVM_FLASH_START_ADDRESS + (NVM_FLASH_SIZE / 2) + (NVM_FLASH_SIZE / 4))
+
+// NVM defines
+#define DHCP        0
+#define STATIC_IP   1
+
+// NVM variables
+//static volatile bool xferDone = false;
+
+uint32_t writeData[BUFFER_SIZE] CACHE_ALIGN;
+uint32_t readData[BUFFER_SIZE];
 
 // *****************************************************************************
 // *****************************************************************************
@@ -64,7 +81,11 @@ TCP_COMMUNICATION_DATA tcp_communicationData;
 // *****************************************************************************
 // *****************************************************************************
 
-/* TODO:  Add any necessary callback functions.
+/*
+static void eventHandler(uintptr_t context)
+{
+    xferDone = true;
+}
 */
 
 // *****************************************************************************
@@ -74,9 +95,49 @@ TCP_COMMUNICATION_DATA tcp_communicationData;
 // *****************************************************************************
 
 
-/* TODO:  Add any necessary local functions.
-*/
+bool check_CRC_32(uint32_t* buf, uint32_t length)
+{
+    //uint32_t read_CRC = buf[length-1];
+    uint32_t read_CRC = 0;
+    uint32_t calculate_CRC = 0;
+    uint8_t $_counter = 0;
+    
+    for(uint32_t i = 0; i < length; i++)
+    {
+        if(buf[i] == (uint32_t)'$')
+        {
+            $_counter++;
+            
+            if($_counter == 8)
+                break;
+            if($_counter == 7)
+            {
+                read_CRC = buf[i+1];
+                i++;
+            }
+        }
+        else
+            calculate_CRC += buf[i];
+    }
+        
+    if(read_CRC == calculate_CRC && $_counter == 8)
+        return true;
+    else
+        return false;
+}
 
+uint32_t calc_CRC_32(uint32_t* buf, uint32_t length)
+{
+    uint32_t result = 0;
+    
+    for(uint32_t i = 0; i < length; i++)
+    {
+        if(buf[i] != (uint32_t)'$')
+            result += buf[i];
+    }
+    
+    return result;
+}
 
 // *****************************************************************************
 // *****************************************************************************
@@ -97,11 +158,112 @@ void TCP_COMMUNICATION_Initialize ( void )
     /* Place the App state machine in its initial state. */
     tcp_communicationData.state = TCP_COMMUNICATION_STATE_INIT;
 
-    SYS_CONSOLE_MESSAGE("Step 1\r\n");
-
-    /* TODO: Initialize your application's state machine and other
-     * parameters.
-     */
+    // read NVM
+    uint32_t address = APP_FLASH_ADDRESS;
+    uint8_t *writePtr = (uint8_t *)writeData;
+    
+    //NVM_CallbackRegister(eventHandler, (uintptr_t)NULL);
+    
+    while(NVM_IsBusy() == true);
+    
+    // Read flash data
+    NVM_Read(readData, sizeof(readData), APP_FLASH_ADDRESS);
+    
+    // Check CRC
+    if(check_CRC_32(readData, BUFFER_SIZE))
+    {
+        // DHCP check
+        if(readData[1] == DHCP)
+            return;     // set DHCP default 
+        
+        // save new data and renew TCP interface
+        char new_ip[15] = {0};
+        char new_mask[15] = {0};
+        char new_gw[15] = {0};
+        char new_dns1[15] = {0};
+        char new_dns2[15] = {0};
+        
+        uint8_t $_counter = 0;
+        uint8_t pointer = 0;
+        
+        for(uint8_t i = 3; i < BUFFER_SIZE; i++)
+        {
+            if($_counter == 5)  // without CRC
+                break;
+            
+            if(readData[i] == (uint32_t)'$')
+            {
+                $_counter++;
+                pointer = 0;
+            }
+            else
+            {
+                switch($_counter)
+                {
+                    case 0:
+                        new_ip[pointer++] = readData[i];
+                        break;
+                        
+                    case 1:
+                        new_mask[pointer++] = readData[i];
+                        break;
+                        
+                    case 2:
+                        new_gw[pointer++] = readData[i];
+                        break;
+                        
+                    case 3:
+                        new_dns1[pointer++] = readData[i];
+                        break;
+                        
+                    case 4:
+                        new_dns2[pointer++] = readData[i];
+                        break;
+                }
+            }
+        }
+        
+        const TCPIP_NETWORK_CONFIG __attribute__((unused))  new_config[] =
+        {
+            {
+                .interface = "ETHMAC",
+                .hostName = "MCHPBOARD_E",
+                .macAddr = 0,
+                .ipAddr = new_ip,
+                .ipMask = new_mask,
+                .gateway = new_gw,
+                .priDNS = new_dns1,
+                .secondDNS = new_dns2,
+                .powerMode = TCPIP_NETWORK_DEFAULT_POWER_MODE_IDX0,
+                .startFlags = TCPIP_NETWORK_CONFIG_DNS_CLIENT_ON | TCPIP_NETWORK_CONFIG_IP_STATIC,
+                .pMacObject = &TCPIP_NETWORK_DEFAULT_MAC_DRIVER_IDX0,
+            },
+        };
+        
+        TCPIP_NET_HANDLE hNet = TCPIP_STACK_NetHandleGet("PIC32INT");
+        TCPIP_STACK_NetDown(hNet);
+        TCPIP_STACK_NetUp(hNet, new_config);
+    }
+    else
+    {
+        // Erase the Page
+        NVM_PageErase(address);
+        //while(xferDone == false);
+        //xferDone = false;
+        while(NVM_IsBusy() == true);
+        
+        // write a new buffer
+        writeData[0] = (uint32_t)'$';
+        writeData[1] = DHCP;
+        for(uint8_t i = 2; i < 15; i++)
+        {
+            if(i%2 == 0)
+                writeData[i] = (uint32_t)'$';
+            else
+                writeData[i] = 0;
+        }
+        NVM_RowWrite((uint32_t *)writePtr, address);
+    }   
 }
 
 
@@ -166,26 +328,73 @@ void parsing_rx_tcp(uint8_t* buf, uint16_t length)
         (char) buf[3] == 'I' &&
         (char) buf[4] == 'P'    )
     {
+        // parse data
+        char new_ip[15] = {0};
+        char new_mask[15] = {0};
+        char new_gw[15] = {0};
+        char new_dns1[15] = {0};
+        char new_dns2[15] = {0};
         
-        char new_ip_str[15] = {0};
+        writeData[0] = (uint32_t)'$';
+        writeData[1] = STATIC_IP;
+        writeData[2] = (uint32_t)'$';
+        
+        uint8_t $_counter = 0;
+        uint8_t pointer = 0;
         
         for(uint8_t i = 5; i < length; i++)
         {
-            new_ip_str[i-5] = buf[i];
+            // start from 3
+            writeData[i-2] = buf[i];
+        
+            if(buf[i] == (uint32_t)'$')
+            {
+                $_counter++;
+                pointer = 0;
+            }
+            else
+            {
+                switch($_counter)
+                {
+                    case 0:
+                        new_ip[pointer++] = buf[i];
+                        break;
+                        
+                    case 1:
+                        new_mask[pointer++] = buf[i];
+                        break;
+                        
+                    case 2:
+                        new_gw[pointer++] = buf[i];
+                        break;
+                        
+                    case 3:
+                        new_dns1[pointer++] = buf[i];
+                        break;
+                        
+                    case 4:
+                        new_dns2[pointer++] = buf[i];
+                        break;
+                }
+            }
         }
+        
+        // CRC
+        writeData[length-2] = (uint32_t)'$';
+        writeData[length-1] = calc_CRC_32(writeData, length-2);
+        writeData[length] = (uint32_t)'$';
         
         const TCPIP_NETWORK_CONFIG __attribute__((unused))  new_config[] =
         {
-
             {
                 .interface = "ETHMAC",
                 .hostName = "MCHPBOARD_E",
                 .macAddr = 0,
-                .ipAddr = new_ip_str,
-                .ipMask = "255.255.255.0",
-                .gateway = "192.168.1.1",
-                .priDNS = "192.1618.1.1",
-                .secondDNS = TCPIP_NETWORK_DEFAULT_SECOND_DNS_IDX0,
+                .ipAddr = new_ip,
+                .ipMask = new_mask,
+                .gateway = new_gw,
+                .priDNS = new_dns1,
+                .secondDNS = new_dns2,
                 .powerMode = TCPIP_NETWORK_DEFAULT_POWER_MODE_IDX0,
                 .startFlags = TCPIP_NETWORK_CONFIG_DNS_CLIENT_ON | TCPIP_NETWORK_CONFIG_IP_STATIC,
                 .pMacObject = &TCPIP_NETWORK_DEFAULT_MAC_DRIVER_IDX0,
@@ -195,14 +404,26 @@ void parsing_rx_tcp(uint8_t* buf, uint16_t length)
         TCPIP_NET_HANDLE hNet = TCPIP_STACK_NetHandleGet("PIC32INT");
         TCPIP_STACK_NetDown(hNet);
         TCPIP_STACK_NetUp(hNet, new_config);
+        
+        // save new data
+        uint32_t address = APP_FLASH_ADDRESS;
+        uint8_t *writePtr = (uint8_t *)writeData;
+        
+        while(NVM_IsBusy() == true);
+        NVM_PageErase(address);
+        //while(xferDone == false);
+        //xferDone = false;
+        while(NVM_IsBusy() == true);
+        
+        NVM_RowWrite((uint32_t *)writePtr, address);
     }
     
     // Set DHCP
     if(
         (char) buf[3] == 'D' &&
         (char) buf[4] == 'H' &&    
-        (char) buf[4] == 'C' &&
-        (char) buf[5] == 'P'    )
+        (char) buf[5] == 'C' &&
+        (char) buf[6] == 'P'    )
     {
         const TCPIP_NETWORK_CONFIG __attribute__((unused))  new_config[] =
         {
@@ -226,8 +447,29 @@ void parsing_rx_tcp(uint8_t* buf, uint16_t length)
         TCPIP_STACK_NetDown(hNet);
         TCPIP_STACK_NetUp(hNet, new_config);
         
+        // save new data to NVM
+        // Erase the Page
+        uint32_t address = APP_FLASH_ADDRESS;
+        uint8_t *writePtr = (uint8_t *)writeData;
+        
+        while(NVM_IsBusy() == true);
+        NVM_PageErase(address);
+        //while(xferDone == false);
+        //xferDone = false;
+        while(NVM_IsBusy() == true);
+        
+        // write a new buffer
+        writeData[0] = (uint32_t)'$';
+        writeData[1] = DHCP;
+        for(uint8_t i = 2; i < 15; i++)
+        {
+            if(i%2 == 0)
+                writeData[i] = (uint32_t)'$';
+            else
+                writeData[i] = 0;
+        }
+        NVM_RowWrite((uint32_t *)writePtr, address);
     }
-            
     
 }   // void parsing_rx_tcp(uint8_t* buf, uint16_t length)
 

@@ -3,17 +3,11 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/library/tcpip/src/tcpip_manager.c</file>
             <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/initialization.c</file>
             <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/tcp_communication.c</file>
-            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/library/tcpip/tcpip_helpers.h</file>
-            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/library/tcpip/src/tcp.c</file>
-            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/library/tcpip/tcp.h</file>
-            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/library/tcpip/tcpip.h</file>
             <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/configuration.h</file>
+            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/peripheral/nvm/plib_nvm.h</file>
             <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/tcp_communication.h</file>
-            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/library/tcpip/tcpip_manager.h</file>
-            <file>file:/C:/Users/Filippov's_Family/HarmonyProjects/usb_test/firmware/src/config/default/library/tcpip/src/tcpip_helpers.c</file>
         </group>
     </open-files>
 </project-private>
