@@ -335,8 +335,8 @@
           <logicalFolder name="system" displayName="system" projectFiles="true">
             <logicalFolder name="console" displayName="console" projectFiles="true">
               <itemPath>../src/config/default/system/console/sys_console.h</itemPath>
-              <itemPath>../src/config/default/system/console/src/sys_console_usb_cdc_definitions.h</itemPath>
               <itemPath>../src/config/default/system/console/src/sys_console_local.h</itemPath>
+              <itemPath>../src/config/default/system/console/src/sys_console_usb_cdc_definitions.h</itemPath>
               <itemPath>../src/config/default/system/console/src/sys_console_usb_cdc.h</itemPath>
             </logicalFolder>
             <logicalFolder name="debug" displayName="debug" projectFiles="true">

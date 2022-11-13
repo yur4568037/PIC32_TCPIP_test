@@ -179,19 +179,19 @@ void APP_Tasks ( void )
                 {
                     sw1_flag = 1;
                     
-                    //SYS_CONSOLE_MESSAGE("SW1 is pressed\r\n");
-                    SYS_DEBUG_MESSAGE(SYS_ERROR_INFO, "***This is USB Console Instance 0***\n\r");
-                    SYS_DEBUG_MESSAGE(SYS_ERROR_DEBUG, "Test Debug Message!\n\r");    
-                    SYS_DEBUG_PRINT(SYS_ERROR_ERROR, "Sys Print test %d, %s\n\r", 1, "str1");
-                    SYS_DEBUG_PRINT(SYS_ERROR_INFO, "Sys Print test %d, %s\n\r", 2, "str2");
+                    SYS_CONSOLE_MESSAGE("SW1 is pressed\r\n");
+                    //SYS_DEBUG_MESSAGE(SYS_ERROR_INFO, "***This is USB Console Instance 0***\n\r");
+                    //SYS_DEBUG_MESSAGE(SYS_ERROR_DEBUG, "Test Debug Message!\n\r");    
+                    //SYS_DEBUG_PRINT(SYS_ERROR_ERROR, "Sys Print test %d, %s\n\r", 1, "str1");
+                    //SYS_DEBUG_PRINT(SYS_ERROR_INFO, "Sys Print test %d, %s\n\r", 2, "str2");
                     /* Change the error level to only print the debug messages with error value set to SYS_ERROR_ERROR or lower */
-                    SYS_DEBUG_ErrorLevelSet(SYS_ERROR_ERROR);
+                    //SYS_DEBUG_ErrorLevelSet(SYS_ERROR_ERROR);
 
                     /* The below message should not get printed as "SYS_ERROR_DEBUG" is higher than "SYS_ERROR_ERROR" */
-                    SYS_DEBUG_MESSAGE(SYS_ERROR_DEBUG, "This message should not be printed!\n\r");
+                    //SYS_DEBUG_MESSAGE(SYS_ERROR_DEBUG, "This message should not be printed!\n\r");
 
                     /* Set the error level back to SYS_ERROR_DEBUG */
-                    SYS_DEBUG_ErrorLevelSet(SYS_ERROR_DEBUG);
+                    //SYS_DEBUG_ErrorLevelSet(SYS_ERROR_DEBUG);
                     
                     LED1_Set();
                 }

@@ -507,8 +507,9 @@ void TCP_COMMUNICATION_Tasks ( void )
                 tcp_communicationData.state = TCP_COMMUNICATION_STATE_CHECK_NET_READY;
                 
                 tcp_communicationData.mrqSocket = INVALID_SOCKET;
+                tcp_communicationData.UDPsocket = INVALID_SOCKET;
              
-                SYS_CONSOLE_MESSAGE("Step 2\r\n");
+                //SYS_CONSOLE_MESSAGE("Step 2\r\n");
             }
             break;
         }
@@ -553,7 +554,6 @@ void TCP_COMMUNICATION_Tasks ( void )
             TCPIP_NET_HANDLE hNet = TCPIP_STACK_NetHandleGet("PIC32INT");
             //TCPIP_NET_HANDLE hNet = TCPIP_STACK_NetHandleGet("ETHMAC");
             
-            
             temp_counter++;
             if(temp_counter >= 100000)
             {
@@ -566,7 +566,61 @@ void TCP_COMMUNICATION_Tasks ( void )
             {
                 SYS_CONSOLE_MESSAGE("TCPIP_STACK_NetIsReady\r\n");
                                 
-                tcp_communicationData.state = TCP_COMMUNICATION_STATE_TRY_TO_CONNECT_TO_SERVER;
+                //tcp_communicationData.state = TCP_COMMUNICATION_STATE_TRY_TO_CONNECT_TO_SERVER;
+                tcp_communicationData.state = TCP_COMMUNICATION_STATE_START_UDP_LISTENER;
+            }
+            
+            break;
+        }
+        
+        case TCP_COMMUNICATION_STATE_START_UDP_LISTENER:
+        {
+            if(tcp_communicationData.UDPsocket == INVALID_SOCKET)
+            {
+                //tcp_communicationData.UDPsocket = TCPIP_UDP_ClientOpen(IP_ADDRESS_TYPE_IPV4, 5050,
+                tcp_communicationData.UDPsocket = TCPIP_UDP_ServerOpen(IP_ADDRESS_TYPE_IPV4, 5050, NULL);
+                /*
+                if(tcp_communicationData.UDPsocket == INVALID_SOCKET)
+                {
+                    TCPIP_NET_HANDLE hNet = TCPIP_STACK_NetHandleGet("PIC32INT");
+                    TCPIP_UDP_BcastIPV4AddressSet(tcp_communicationData.UDPsocket, UDP_BCAST_NETWORK_LIMITED, hNet);
+                }
+                */
+                break;
+            }
+            
+            uint16_t udp_length = TCPIP_UDP_GetIsReady(tcp_communicationData.UDPsocket);
+            
+            if(udp_length > 0)
+            {
+                char pic32_str[] = "pic32 broadcast request";
+                uint8_t read_buf[64] = {0};
+                
+                TCPIP_UDP_ArrayGet(tcp_communicationData.UDPsocket, read_buf, udp_length);
+                
+                // compare 
+                bool check_flag = true;
+                for(uint8_t i = 0; i < strlen(pic32_str); i++)
+                {
+                    if(pic32_str[i] != read_buf[i])
+                    {
+                        check_flag = false;
+                        break;
+                    }
+                }
+                
+                if(check_flag)
+                {
+                    UDP_SOCKET_INFO udp_struct;
+                    
+                    TCPIP_UDP_SocketInfoGet(tcp_communicationData.UDPsocket, &udp_struct);
+                    
+                    tcp_communicationData.server_IP = udp_struct.remoteIPaddress;
+                    
+                    TCPIP_UDP_Close(tcp_communicationData.UDPsocket);
+                    
+                    tcp_communicationData.state = TCP_COMMUNICATION_STATE_TRY_TO_CONNECT_TO_SERVER;
+                }    
             }
             
             break;
@@ -575,32 +629,19 @@ void TCP_COMMUNICATION_Tasks ( void )
         case TCP_COMMUNICATION_STATE_TRY_TO_CONNECT_TO_SERVER:
         {
             
-            IPV4_ADDR addr;
-            //char pcip[] = "192.168.100.55";
-            char pcip[] = "192.168.1.10";
+            //IPV4_ADDR addr;
+            //char pcip[] = "192.168.1.10";
             
-            TCPIP_Helper_StringToIPAddress(pcip, &addr);
+            //TCPIP_Helper_StringToIPAddress(pcip, &addr);
             
             // trying to connect
             tcp_communicationData.mrqSocket = TCPIP_TCP_ClientOpen(IP_ADDRESS_TYPE_IPV4, 2323,
-                    (IP_MULTI_ADDRESS*) &addr);
+                    //(IP_MULTI_ADDRESS*) &addr);
+                    &tcp_communicationData.server_IP);
             
             tcp_connect_counter = 1;
             tcp_communicationData.state = TCP_COMMUNICATION_STATE_CHECK_CONNECTION;
             
-            
-            
-            //data_counter = 1;
-            
-            /*
-            TCPIP_TCP_Flush(tcp_communicationData.mrqSocket);
-            if (TCPIP_TCP_Connect(tcp_communicationData.mrqSocket))
-            {
-                SYS_CONSOLE_MESSAGE("Client is connected to server \r\n");
-
-                tcp_communicationData.state = TCP_COMMUNICATION_STATE_SERVER_CONNECTION_HANDLER;
-            }
-            */
             break;
         }
 
@@ -610,6 +651,10 @@ void TCP_COMMUNICATION_Tasks ( void )
             {
                 SYS_CONSOLE_MESSAGE("Client is disconnected \r\n");
                 TCPIP_TCP_Close(tcp_communicationData.mrqSocket);
+                TCPIP_UDP_Close(tcp_communicationData.UDPsocket);
+                tcp_communicationData.mrqSocket = INVALID_SOCKET;
+                tcp_communicationData.UDPsocket = INVALID_SOCKET;
+                
                 tcp_communicationData.state = TCP_COMMUNICATION_STATE_TRY_TO_CONNECT_TO_SERVER;
                 break;
             }
